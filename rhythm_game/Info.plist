@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  ...
+  <!-- ユーザーがデバイスを Mac に接続したときに Finder/iTunes から Documents を見れるようにする -->
+  <key>UIFileSharingEnabled</key>
+  <true/>
+
+  <!-- Files アプリで「ファイルを開いて編集」等を行いやすくする -->
+  <key>LSSupportsOpeningDocumentsInPlace</key>
+  <true/>
+
+  <!-- 必要ならファイルタイプ (例: json) を宣言する項目を追加できます（オプション） -->
+  ...
+</dict>
+</plist>
