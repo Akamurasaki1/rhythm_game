@@ -35,7 +35,6 @@ public struct Sheet: Codable {
     public var bpm: Double?
     public var offset: Double?
     public var audioFilename: String?
-    public var movieFilename: String?
     public var metadata: [String: String]?
     public var notes: [SheetNote]
 
@@ -48,7 +47,6 @@ public struct Sheet: Codable {
         self.bpm = bpm
         self.offset = offset
         self.audioFilename = audioFilename
-        self.movieFilename = movieFilename
         self.metadata = metadata
         self.notes = notes
     }
