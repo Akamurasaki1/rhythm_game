@@ -1,123 +1,33 @@
-//
-//  SheetEditorView.swift
-//  rhythm_game
-//
-//  Created by Karen Naito on 2025/11/11.
-//
-
-
 import SwiftUI
+import UniformTypeIdentifiers
 
-/// シンプルな譜面エディタ（ローカル Documents に JSON 保存/読み込み）
+// Refactored Sheet editor: split large body into small subviews to avoid the
+// "The compiler is unable to type-check this expression in reasonable time" error.
+
 struct SheetEditorView: View {
-    @State private var sheet = Sheet()
-    @State private var filename: String = "my_sheet"
+    @State private var sheet: Sheet = Sheet()
+    @State private var filename: String = "mysong"
     @State private var showAlert = false
     @State private var alertMessage = ""
     @State private var editMode: EditMode = .inactive
+    @Environment(\.presentationMode) private var presentationMode
 
     var body: some View {
         NavigationView {
-            VStack {
+            VStack(spacing: 0) {
                 Form {
-                    Section(header: Text("Sheet Info")) {
-                        TextField("Filename (save/load)", text: $filename)
-                            .autocapitalization(.none)
-                        TextField("Title", text: $sheet.title)
-                        HStack {
-                            Text("BPM")
-                            Spacer()
-                            TextField("BPM", value: Binding(get: { sheet.bpm ?? 120.0 }, set: { sheet.bpm = $0 }), formatter: NumberFormatter())
-                                .multilineTextAlignment(.trailing)
-                                .keyboardType(.decimalPad)
-                                .frame(width: 100)
-                        }
-                        HStack {
-                            Text("Offset (s)")
-                            Spacer()
-                            TextField("Offset", value: Binding(get: { sheet.offset ?? 0.0 }, set: { sheet.offset = $0 }), formatter: NumberFormatter())
-                                .multilineTextAlignment(.trailing)
-                                .keyboardType(.decimalPad)
-                                .frame(width: 100)
-                        }
-                    }
-
-                    Section(header: HStack {
-                        Text("Notes")
-                        Spacer()
-                        EditButton()
-                    }) {
-                        List {
-                            ForEach(sheet.notes.indices, id: \.self) { i in
-                                NavigationLink(destination: NoteEditView(note: $sheet.notes[i])) {
-                                    HStack {
-                                        VStack(alignment: .leading) {
-                                            Text(String(format: "t: %.3f s  angle: %.1f°", sheet.notes[i].time, sheet.notes[i].angle))
-                                                .font(.subheadline)
-                                            Text(String(format: "pos: (%.2f, %.2f) id: %@", sheet.notes[i].x, sheet.notes[i].y, sheet.notes[i].id.uuidString.prefix(8) as CVarArg))
-                                                .font(.caption)
-                                                .foregroundColor(.gray)
-                                        }
-                                        Spacer()
-                                    }
-                                }
-                            }
-                            .onMove { indices, newOffset in
-                                sheet.notes.move(fromOffsets: indices, toOffset: newOffset)
-                            }
-                            .onDelete { indices in
-                                sheet.notes.remove(atOffsets: indices)
-                            }
-                        }
-                        HStack {
-                            Spacer()
-                            Button(action: {
-                                // 新ノートを追加（time は最後の + 0.5 秒推定）
-                                let nextTime = (sheet.notes.map { $0.time }.max() ?? 0.8) + 0.5
-                                let n = SheetNote(time: nextTime, angle: 0.0, x: 0.5, y: 0.5)
-                                sheet.notes.append(n)
-                                // keep sorted by time for convenience
-                                sheet.notes.sort { $0.time < $1.time }
-                            }) {
-                                Label("Add Note", systemImage: "plus")
-                            }
-                            Spacer()
-                        }
-                    }
+                    HeaderSection(sheet: $sheet, filename: $filename)
+                    NotesSection(sheet: $sheet, editMode: $editMode)
                 }
-                HStack {
-                    Button("Save") {
-                        do {
-                            try SheetFileManager.save(sheet: sheet, filename: filename)
-                            alertMessage = "Saved to \(SheetFileManager.urlForFile(named: filename).lastPathComponent)"
-                        } catch {
-                            alertMessage = "Save failed: \(error.localizedDescription)"
-                        }
-                        showAlert = true
-                    }
-                    .padding()
-                    Spacer()
-                    Button("Load") {
-                        do {
-                            let loaded = try SheetFileManager.load(filename: filename)
-                            sheet = loaded
-                            alertMessage = "Loaded \(filename).json"
-                        } catch {
-                            alertMessage = "Load failed: \(error.localizedDescription)"
-                        }
-                        showAlert = true
-                    }
-                    .padding()
-                    Spacer()
-                    Button("List Files") {
-                        let urls = SheetFileManager.listSavedFiles()
-                        alertMessage = urls.map { $0.lastPathComponent }.joined(separator: "\n")
-                        if alertMessage.isEmpty { alertMessage = "(no json files in Documents)" }
-                        showAlert = true
-                    }
-                    .padding()
-                }
+                BottomButtons(
+                    sheet: sheet,
+                    filename: filename,
+                    onSave: saveAction,
+                    onLoad: loadAction,
+                    onListFiles: listFilesAction
+                )
                 .padding(.horizontal)
+                .padding(.vertical, 8)
             }
             .navigationTitle("Sheet Editor")
             .navigationBarTitleDisplayMode(.inline)
@@ -125,14 +35,163 @@ struct SheetEditorView: View {
             .alert(isPresented: $showAlert) {
                 Alert(title: Text("Info"), message: Text(alertMessage), dismissButton: .default(Text("OK")))
             }
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Close") { presentationMode.wrappedValue.dismiss() }
+                }
+            }
+        }
+    }
+
+    // MARK: - Actions
+
+    private func saveAction() {
+        do {
+            try SheetFileManager.save(sheet: sheet, filename: filename)
+            alertMessage = "Saved to \(SheetFileManager.urlForFile(named: filename).lastPathComponent)"
+        } catch {
+            alertMessage = "Save failed: \(error.localizedDescription)"
+        }
+        showAlert = true
+    }
+
+    private func loadAction() {
+        do {
+            let loaded = try SheetFileManager.load(filename: filename)
+            sheet = loaded
+            alertMessage = "Loaded \(filename).json"
+        } catch {
+            alertMessage = "Load failed: \(error.localizedDescription)"
+        }
+        showAlert = true
+    }
+
+    private func listFilesAction() {
+        let urls = SheetFileManager.listSavedFiles()
+        alertMessage = urls.map { $0.lastPathComponent }.joined(separator: "\n")
+        if alertMessage.isEmpty { alertMessage = "(no json files in Documents)" }
+        showAlert = true
+    }
+}
+
+// MARK: - HeaderSection
+
+// Replace the existing HeaderSection with this version
+private struct HeaderSection: View {
+    @Binding var sheet: Sheet
+    @Binding var filename: String
+
+    var body: some View {
+        Section(header: Text("Sheet Info")) {
+            TextField("Filename (save/load)", text: $filename)
+                .autocapitalization(.none)
+
+            // Title binding created from the sheet binding
+            TextField("Title", text: Binding(
+                get: { sheet.title },
+                set: { sheet.title = $0 }
+            ))
+
+            HStack {
+                Text("BPM")
+                Spacer()
+                TextField("BPM", value: Binding(
+                    get: { sheet.bpm ?? 120.0 },
+                    set: { sheet.bpm = $0 }
+                ), formatter: NumberFormatter())
+                    .multilineTextAlignment(.trailing)
+                    .keyboardType(.decimalPad)
+                    .frame(width: 100)
+            }
+
+            HStack {
+                Text("Offset (s)")
+                Spacer()
+                TextField("Offset", value: Binding(
+                    get: { sheet.offset ?? 0.0 },
+                    set: { sheet.offset = $0 }
+                ), formatter: NumberFormatter())
+                    .multilineTextAlignment(.trailing)
+                    .keyboardType(.decimalPad)
+                    .frame(width: 100)
+            }
+
+            HStack {
+                Text("Audio")
+                Spacer()
+                Text(sheet.audioFilename ?? "—")
+                    .foregroundColor(.gray)
+            }
         }
     }
 }
 
-/// ノート編集ビュー（Binding としてノートを直接編集）
+// MARK: - NotesSection
+
+private struct NotesSection: View {
+    @Binding var sheet: Sheet
+    @Binding var editMode: EditMode
+
+    var body: some View {
+        Section(header: HStack {
+            Text("Notes")
+            Spacer()
+            EditButton()
+        }) {
+            // Use Binding-based ForEach to give the compiler explicit types
+            ForEach($sheet.notes) { $note in
+                NavigationLink(destination: NoteEditView(note: $note)) {
+                    NoteRowView(note: note)
+                }
+            }
+            .onDelete { indices in
+                sheet.notes.remove(atOffsets: indices)
+            }
+            .onMove { indices, newOffset in
+                sheet.notes.move(fromOffsets: indices, toOffset: newOffset)
+            }
+
+            HStack {
+                Spacer()
+                Button(action: addNote) {
+                    Label("Add Note", systemImage: "plus")
+                }
+                Spacer()
+            }
+        }
+    }
+
+    private func addNote() {
+        let nextTime = (sheet.notes.map { $0.time }.max() ?? 0.8) + 0.5
+        let n = SheetNote(id: "\(sheet.id)-\(String(format: "%04d", (sheet.notes.count + 1)))", time: nextTime, angle: 0.0, x: 0.5, y: 0.5)
+        sheet.notes.append(n)
+        sheet.notes.sort { $0.time < $1.time }
+    }
+}
+
+// MARK: - NoteRowView
+
+private struct NoteRowView: View {
+    var note: SheetNote
+
+    var body: some View {
+        HStack {
+            VStack(alignment: .leading) {
+                Text(String(format: "t: %.3f s  angle: %.1f°", note.time, note.angle))
+                    .font(.subheadline)
+                Text(String(format: "pos: (%.2f, %.2f) id: %@", note.x, note.y, String(note.id.prefix(8))))
+                    .font(.caption)
+                    .foregroundColor(.gray)
+            }
+            Spacer()
+        }
+    }
+}
+
+// MARK: - NoteEditView
+
 struct NoteEditView: View {
     @Binding var note: SheetNote
-    // helper number formatter
     private static let nf: NumberFormatter = {
         let f = NumberFormatter()
         f.minimumFractionDigits = 0
@@ -184,7 +243,7 @@ struct NoteEditView: View {
                 HStack {
                     Spacer()
                     Button("Regenerate ID") {
-                        note.id = UUID()
+                        note.id = UUID().uuidString
                     }
                     Spacer()
                 }
@@ -195,9 +254,39 @@ struct NoteEditView: View {
     }
 }
 
-/// Preview helper
-struct SheetEditorView_Previews: PreviewProvider {
-    static var previews: some View {
-        SheetEditorView()
+// MARK: - BottomButtons (Save / Load / List)
+
+private struct BottomButtons: View {
+    let sheet: Sheet
+    let filename: String
+    let onSave: () -> Void
+    let onLoad: () -> Void
+    let onListFiles: () -> Void
+
+    var body: some View {
+        HStack {
+            Button("Save", action: onSave)
+                .padding()
+            Spacer()
+            Button("Load", action: onLoad)
+                .padding()
+            Spacer()
+            Button("List Files", action: onListFiles)
+                .padding()
+        }
+    }
+}
+
+// MARK: - Bindings for optional numeric fields convenience
+
+private extension Sheet {
+    var bpmBinding: Binding<Double> {
+        Binding(get: { self.bpm ?? 120.0 }, set: { self.bpm = $0 })
+    }
+    var offsetBinding: Binding<Double> {
+        Binding(get: { self.offset ?? 0.0 }, set: { self.offset = $0 })
+    }
+    var titleBinding: Binding<String> {
+        Binding(get: { self.title }, set: { self.title = $0 })
     }
 }
