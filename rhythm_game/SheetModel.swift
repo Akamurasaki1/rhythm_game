@@ -1,72 +1,85 @@
 import Foundation
+import SwiftUI
 import CoreGraphics
 
-public struct SheetNote: Codable, Identifiable {
-    public var id: String
-    public var time: Double      // 秒
-    public var angle: Double     // 度
-    public var x: Double         // 0..1
-    public var y: Double         // 0..1
-    public var type: String?     // optional: "flick"/"hold"/"tap"
-    public var length: Double?   // for hold notes
-
-    public init(id: String = UUID().uuidString, time: Double, angle: Double, x: Double, y: Double, type: String? = nil, length: Double? = nil) {
-        self.id = id
-        self.time = time
-        self.angle = angle
-        self.x = x
-        self.y = y
-        self.type = type
-        self.length = length
-    }
-
-    // 小さなバリデーションヘルパー
-    public func isValid() -> Bool {
-        return time.isFinite && x >= 0.0 && x <= 1.0 && y >= 0.0 && y <= 1.0
+/// Documents 等のファイル管理で使う簡易ユーティリティ
+enum SheetFileManager {
+    static var documentsURL: URL {
+        FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first!
     }
 }
 
-public struct Sheet: Codable {
-    public var version: Int
-    public var title: String
-    public var difficulty: String
-    public var level: Int?
-    public var id: String
-    public var bpm: Double?
-    public var offset: Double?
-    public var audioFilename: String?
-    public var metadata: [String: String]?
-    public var notes: [SheetNote]
+/// 正規化された座標（0.0..1.0 の想定）
+struct NormalizedPosition: Codable, Equatable {
+    var x: Double
+    var y: Double
+}
 
-    public init(version: Int = 1, title: String = "Untitled", difficulty: String = "Normal", level: Int? = nil, id: String = UUID().uuidString, bpm: Double? = nil, offset: Double? = 0.0, audioFilename: String? = nil, movieFilename: String? = nil, metadata: [String: String]? = nil, notes: [SheetNote] = []) {
-        self.version = version
-        self.title = title
-        self.difficulty = difficulty
-        self.level = level
-        self.id = id
-        self.bpm = bpm
-        self.offset = offset
-        self.audioFilename = audioFilename
-        self.metadata = metadata
-        self.notes = notes
+/// Sheet 内で定義されるノーツの形式（JSON 側の正しい形）
+struct SheetNote: Codable, Equatable {
+    var time: Double
+    var angleDegrees: Double
+    var normalizedPosition: NormalizedPosition
+
+    // 将来他フィールドがあれば、ここに追加（例: type, id, meta 等）
+}
+
+/// Bundle / file から読み込む Sheet の定義
+struct Sheet: Codable, Equatable {
+    var title: String
+    var notes: [SheetNote]
+    var audioFilename: String?
+    var offset: Double?
+
+    // JSON の互換性を保つために CodingKeys を定義しておく（必要なら名前マッピング）
+    enum CodingKeys: String, CodingKey {
+        case title
+        case notes
+        case audioFilename
+        case offset
+    }
+}
+
+/// アプリ内で再生に使うノーツ表現
+/// ContentView の既存コードは Note.time / Note.angleDegrees / Note.normalizedPosition(CGPoint) を想定しているため合わせる
+struct Note: Equatable {
+    var time: Double
+    var angleDegrees: Double
+    var normalizedPosition: CGPoint
+}
+
+extension Note {
+    /// SheetNote から Note へ安全に変換するイニシャライザ
+    init(from sheetNote: SheetNote) {
+        self.time = sheetNote.time
+        self.angleDegrees = sheetNote.angleDegrees
+        self.normalizedPosition = CGPoint(x: sheetNote.normalizedPosition.x, y: sheetNote.normalizedPosition.y)
+    }
+}
+
+/// Helper: SheetNote 配列を Note 配列に変換
+extension Array where Element == SheetNote {
+    func asNotes() -> [Note] {
+        self.map { Note(from: $0) }
+    }
+}
+
+/// CGPoint を Codable として扱うためのエンコード/デコード実装（Note を直接 Codable にしない設計にしたので補助的）
+extension CGPoint: Codable {
+    public init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        let x = try c.decode(CGFloat.self, forKey: .x)
+        let y = try c.decode(CGFloat.self, forKey: .y)
+        self.init(x: x, y: y)
     }
 
-    // 基本バリデーション
-    public func validate() -> [String] {
-        var errors: [String] = []
-        if version <= 0 { errors.append("version must be > 0") }
-        if title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty { errors.append("title empty") }
-        for n in notes {
-            if !n.isValid() {
-                errors.append("invalid note: \(n.id)")
-            }
-        }
-        return errors
+    public func encode(to encoder: Encoder) throws {
+        var c = encoder.container(keyedBy: CodingKeys.self)
+        try c.encode(self.x, forKey: .x)
+        try c.encode(self.y, forKey: .y)
     }
-}//
-//  SheetModel.swift
-//  rhythm_game
-//
-//  Created by Karen Naito on 2025/11/15.
-//
 
+    enum CodingKeys: String, CodingKey {
+        case x, y
+    }
+}

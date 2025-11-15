@@ -252,7 +252,20 @@ struct ContentView: View {
                                 if selectedSampleIndex >= sampleDataSets.count {
                                     let bundledIndex = selectedSampleIndex - sampleDataSets.count
                                     if bundledSheets.indices.contains(bundledIndex) {
-                                        notesToPlay = bundledSheets[bundledIndex].sheet.notes as! [Note]
+                                        // safer conversion instead of forced cast
+                                        let rawNotes = bundledSheets[bundledIndex].sheet.notes
+                                        if let typed = rawNotes as? [Note] {
+                                            notesToPlay = typed
+                                        } else {
+                                            // try converting via JSON in case notes are decoded as [Any]
+                                            do {
+                                                let json = try JSONSerialization.data(withJSONObject: rawNotes, options: [])
+                                                notesToPlay = try JSONDecoder().decode([SheetNote].self, from: json) as! [Note]
+                                            } catch {
+                                                print("Failed to convert bundled sheet notes to [Note]: \(error)")
+                                                notesToPlay = []
+                                            }
+                                        }
                                     } else {
                                         notesToPlay = []
                                     }
@@ -563,13 +576,36 @@ struct ContentView: View {
         autoDeleteWorkItems.values.forEach { $0.cancel() }
         autoDeleteWorkItems.removeAll()
 
-        for note in notesToPlay {
+        // デバッグ出力・バリデーション追加版
+        print("startPlayback: scheduling \(notesToPlay.count) notes")
+        for (i, note) in notesToPlay.enumerated() {
+            print("note[\(i)]: time=\(note.time), angle=\(note.angleDegrees), normalized=\(note.normalizedPosition)")
+
+            // normalizedPosition の妥当性チェック（NaN / infinite / 範囲外）
+            let nx = note.normalizedPosition.x
+            let ny = note.normalizedPosition.y
+            if nx.isNaN || ny.isNaN || nx.isInfinite || ny.isInfinite {
+                print("Skipping note[\(i)] due to invalid normalizedPosition: \(note.normalizedPosition)")
+                continue
+            }
+            // 画面外へ出るような値を含むなら clamp する or skip（ここでは clamp）
+            let clampedX = min(max(0.0, nx), 1.0)
+            let clampedY = min(max(0.0, ny), 1.0)
+
             let approachDistance = approachDistanceFraction * min(size.width, size.height)
             let approachDuration = approachDistance / max(approachSpeed, 1.0)
             let spawnTime = max(0.0, note.time - approachDuration)
 
-            let target = CGPoint(x: note.normalizedPosition.x * size.width,
-                                 y: note.normalizedPosition.y * size.height)
+            let target = CGPoint(x: clampedX * size.width,
+                                 y: clampedY * size.height)
+
+            // angle の妥当性（NaN 等）もチェック
+            if note.angleDegrees.isNaN || note.angleDegrees.isInfinite {
+                print("Skipping note[\(i)] due to invalid angleDegrees: \(note.angleDegrees)")
+                continue
+            }
+
+
             let theta = CGFloat(note.angleDegrees) * .pi / 180.0
             let rodDir = CGPoint(x: cos(theta), y: sin(theta))
             // ここは一方向から進入（v12 の感触）

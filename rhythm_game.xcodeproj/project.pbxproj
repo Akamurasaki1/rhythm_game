@@ -39,6 +39,7 @@
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
 				Info.plist,
+				"Position+CGPoint.swift",
 			);
 			target = 9C0B8DBA2EC30E08000337A1 /* rhythm_game */;
 		};
@@ -51,11 +52,22 @@
 		};
 /* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
 
+/* Begin PBXFileSystemSynchronizedGroupBuildPhaseMembershipExceptionSet section */
+		9C0B8E602EC87ADF000337A1 /* Exceptions for "rhythm_game" folder in "Copy Bundle Resources" phase from "rhythm_game" target */ = {
+			isa = PBXFileSystemSynchronizedGroupBuildPhaseMembershipExceptionSet;
+			buildPhase = 9C0B8DB92EC30E08000337A1 /* Resources */;
+			membershipExceptions = (
+				"Position+CGPoint.swift",
+			);
+		};
+/* End PBXFileSystemSynchronizedGroupBuildPhaseMembershipExceptionSet section */
+
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		9C0B8DBD2EC30E08000337A1 /* rhythm_game */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			exceptions = (
 				9C0B8DF82EC37E75000337A1 /* Exceptions for "rhythm_game" folder in "rhythm_game" target */,
+				9C0B8E602EC87ADF000337A1 /* Exceptions for "rhythm_game" folder in "Copy Bundle Resources" phase from "rhythm_game" target */,
 			);
 			path = rhythm_game;
 			sourceTree = "<group>";

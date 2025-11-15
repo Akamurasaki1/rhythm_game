@@ -14,7 +14,7 @@ func loadBundledSheets() -> [BundledSheet] {
             do {
                 let data = try Data(contentsOf: url)
                 let s = try decoder.decode(Sheet.self, from: data)
-                results.append(BundledSheet(filename: url.lastPathComponent, sheet: s))
+                results.append(BundledSheet(filename: url.lastPathComponent, sheet: <#Sheet#>))
             } catch {
                 print("loadBundledSheets: failed to decode bundled sheet at \(url): \(error)")
             }
@@ -29,7 +29,7 @@ func loadBundledSheets() -> [BundledSheet] {
                     let data = try Data(contentsOf: url)
                     let s = try decoder.decode(Sheet.self, from: data)
                     if !results.contains(where: { $0.filename == url.lastPathComponent }) {
-                        results.append(BundledSheet(filename: url.lastPathComponent, sheet: s))
+                        results.append(BundledSheet(filename: url.lastPathComponent, sheet: <#Sheet#>))
                     }
                 } catch {
                     // ignore non-sheet JSON
@@ -69,7 +69,7 @@ func makeSampleEntries(from sampleDataSets: [[Note]]) -> [SampleEntry] {
     for (filename, sheet) in saved {
         let displayName = sheet.title.isEmpty ? filename : "\(sheet.title) (\(filename))"
         let mapped: [Note] = sheet.notes.map {
-            Note(time: $0.time, angleDegrees: $0.angle, normalizedPosition: CGPoint(x: $0.x, y: $0.y))
+            Note(time: $0.time, angleDegrees: $0.angle, normalizedPosition: $0.normalizedPosition)
         }
         entries.append(SampleEntry(name: displayName, notes: mapped as! [SheetNote], bundledFilename: filename, sheetObject: sheet))
     }
@@ -79,7 +79,7 @@ func makeSampleEntries(from sampleDataSets: [[Note]]) -> [SampleEntry] {
     for b in bundled {
         let displayName = b.sheet.title.isEmpty ? b.filename : "\(b.sheet.title) (bundle)"
         let mapped: [Note] = b.sheet.notes.map {
-            Note(time: $0.time, angleDegrees: $0.angle, normalizedPosition: CGPoint(x: $0.x, y: $0.y))
+            Note(time: $0.time, angleDegrees: $0.angle, normalizedPosition: <#Position#>)
         }
         entries.append(SampleEntry(name: displayName, notes: mapped as! [SheetNote], bundledFilename: b.filename, sheetObject: b.sheet))
     }

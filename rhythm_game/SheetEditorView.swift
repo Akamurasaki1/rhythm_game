@@ -1,15 +1,17 @@
 import SwiftUI
-import SheetModel
+import AVFoundation
 import UniformTypeIdentifiers
 
-/// Minimal, safe Sheet editor — simplified so compiler typecheck won't explode.
-/// Replace your existing rhythm_game/SheetEditorView.swift with this to restore a working build.
+/// Minimal editor that matches your SheetModel.swift:
+/// - SheetNote uses `angleDegrees` and `normalizedPosition: Position`.
+/// - Uses safe index-based editing to avoid ForEach binding pitfalls.
+
 struct SheetEditorView: View {
-    @State private var sheet: Sheet = Sheet()
-    @State private var filename: String = "my_sheet"
+    @State private var sheet: Sheet = Sheet(title: "untitled", notes: [])
+    @State private var filename: String = "untitled"
     @State private var showAlert = false
     @State private var alertMessage = ""
-    @Environment(\.presentationMode) private var presentationMode
+    @Environment(\.dismiss) private var dismiss
 
     var body: some View {
         NavigationView {
@@ -18,11 +20,12 @@ struct SheetEditorView: View {
                     Section(header: Text("Info")) {
                         TextField("Filename", text: $filename)
                             .autocapitalization(.none)
-                        // simple title binding
+
                         TextField("Title", text: Binding(
                             get: { sheet.title },
                             set: { sheet.title = $0 }
                         ))
+
                         HStack {
                             Text("BPM")
                             Spacer()
@@ -32,7 +35,6 @@ struct SheetEditorView: View {
                     }
 
                     Section(header: Text("Notes")) {
-                        // simple index-based list to avoid complex ForEach bindings
                         List {
                             ForEach(Array(sheet.notes.enumerated()), id: \.0) { idx, note in
                                 NavigationLink(destination: SimpleNoteEditor(noteIndex: idx, sheet: $sheet)) {
@@ -40,7 +42,6 @@ struct SheetEditorView: View {
                                 }
                             }
                             .onDelete { indices in
-                                // indices is IndexSet for positions in the enumerated array
                                 for i in indices.sorted(by: >) {
                                     if sheet.notes.indices.contains(i) {
                                         sheet.notes.remove(at: i)
@@ -48,9 +49,15 @@ struct SheetEditorView: View {
                                 }
                             }
                         }
+
                         Button("Add Note") {
                             let nextTime = (sheet.notes.map { $0.time }.max() ?? 0.8) + 0.5
-                            let n = SheetNote(id: UUID().uuidString, time: nextTime, angle: 0.0, x: 0.5, y: 0.5)
+                            let n = SheetNote(
+                                id: UUID().uuidString,
+                                time: nextTime,
+                                angleDegrees: 0.0,
+                                normalizedPosition: Position(x: 0.5, y: 0.5)
+                            )
                             sheet.notes.append(n)
                         }
                     }
@@ -85,7 +92,11 @@ struct SheetEditorView: View {
                 .padding(.horizontal)
             }
             .navigationTitle("Sheet Editor")
-            .navigationBarItems(trailing: Button("Close") { presentationMode.wrappedValue.dismiss() })
+            .toolbar {
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button("Close") { dismiss() }
+                }
+            }
             .alert(isPresented: $showAlert) {
                 Alert(title: Text("Info"), message: Text(alertMessage), dismissButton: .default(Text("OK")))
             }
@@ -93,7 +104,8 @@ struct SheetEditorView: View {
     }
 }
 
-// Simple note editor that edits by index to avoid Binding-for-each complications
+// MARK: - Note editor by index
+
 private struct SimpleNoteEditor: View {
     let noteIndex: Int
     @Binding var sheet: Sheet
@@ -127,28 +139,47 @@ private struct NoteEditorFields: View {
             HStack {
                 Text("Time")
                 Spacer()
-                TextField("time", value: $note.time, formatter: Self.nf)
+                TextField("time", value: Binding(
+                    get: { note.time },
+                    set: { v in var n = note; n.time = v; note = n }
+                ), formatter: Self.nf)
                     .multilineTextAlignment(.trailing)
+                    .keyboardType(.decimalPad)
             }
         }
+
         Section(header: Text("Transform")) {
             HStack {
                 Text("Angle")
                 Spacer()
-                TextField("angle", value: $note.angle, formatter: Self.nf)
+                TextField("angle", value: Binding(
+                    get: { note.angleDegrees },
+                    set: { v in var n = note; n.angleDegrees = v; note = n }
+                ), formatter: Self.nf)
                     .multilineTextAlignment(.trailing)
+                    .keyboardType(.decimalPad)
             }
+
             HStack {
                 Text("X")
                 Spacer()
-                TextField("x", value: $note.x, formatter: Self.nf)
+                TextField("x", value: Binding(
+                    get: { note.normalizedPosition.x },
+                    set: { v in var n = note; n.normalizedPosition.x = v; note = n }
+                ), formatter: Self.nf)
                     .multilineTextAlignment(.trailing)
+                    .keyboardType(.decimalPad)
             }
+
             HStack {
                 Text("Y")
                 Spacer()
-                TextField("y", value: $note.y, formatter: Self.nf)
+                TextField("y", value: Binding(
+                    get: { note.normalizedPosition.y },
+                    set: { v in var n = note; n.normalizedPosition.y = v; note = n }
+                ), formatter: Self.nf)
                     .multilineTextAlignment(.trailing)
+                    .keyboardType(.decimalPad)
             }
         }
     }
@@ -158,14 +189,14 @@ private struct NoteRowView: View {
     var note: SheetNote
 
     var body: some View {
-        HStack {
+        let xStr = String(format: "%.2f", note.normalizedPosition.x)
+        let yStr = String(format: "%.2f", note.normalizedPosition.y)
+        let idPrefix = String(note.id?.prefix(8) ?? "--------")
+
+        return HStack {
             VStack(alignment: .leading) {
-                Text(String(format: "t: %.3f s  angle: %.1f°", note.time, note.angle))
+                Text(String(format: "t: %.3f s  angle: %.1f°", note.time, note.angleDegrees))
                     .font(.subheadline)
-                // build formatted substrings outside the main literal to avoid escaping issues
-                let xStr = String(format: "%.2f", note.x)
-                let yStr = String(format: "%.2f", note.y)
-                let idPrefix = String(note.id.prefix(8))
                 Text("pos: (\(xStr), \(yStr)) id: \(idPrefix)")
                     .font(.caption)
                     .foregroundColor(.gray)
