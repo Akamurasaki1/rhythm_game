@@ -1,4 +1,5 @@
 import SwiftUI
+import AVFoundation
 
 /// メイン画面：仕組みは整理したまま（spawn/clear/delete をキレイにスケジュール）、
 /// 表示の見た目とフリック後のアニメーションは以前の v12 っぽい感触に戻しました。
@@ -21,7 +22,7 @@ struct ContentView: View {
     private var sampleCount: Int { sampleDataSets.count }
 
     // UI / 状態
-    @State private var selectedSampleIndex: Int = 0
+    @State private var selectedSampleIndex: Int = 0 // 残す
     @State private var notesToPlay: [Note] = []
 
     @State private var activeNotes: [ActiveNote] = []
@@ -36,6 +37,12 @@ struct ContentView: View {
     @State private var isShowingImportPicker = false
     // optional: temp URL from document picker callback
     @State private var importErrorMessage: String? = nil
+    
+    @State private var sampleEntries: [SampleEntry] = []
+
+    // audio player
+    @State private var audioPlayer: AVAudioPlayer? = nil
+    @State private var currentlyPlayingAudioFilename: String? = nil
     
 
     // スケジュール管理
@@ -79,6 +86,104 @@ struct ContentView: View {
     @State private var initialScrollPerformed = false
     private let carouselItemWidth: CGFloat = 100
     private let carouselItemSpacing: CGFloat = 12
+    
+    private func bundleURLForAudio(named audioFilename: String?) -> URL? {
+        guard let audioFilename = audioFilename, !audioFilename.isEmpty else { return nil }
+        // split name/ext
+        let ext = (audioFilename as NSString).pathExtension
+        let name = (audioFilename as NSString).deletingPathExtension
+
+        // try subdirectory first
+        if let url = Bundle.main.url(forResource: name, withExtension: ext.isEmpty ? "wav" : ext, subdirectory: "bundled-audio") {
+            return url
+        }
+        // fallback to root
+        if let url = Bundle.main.url(forResource: name, withExtension: ext.isEmpty ? "wav" : ext) {
+            return url
+        }
+        return nil
+    }
+    // 選択中の SampleEntry が bundled sheet の場合は対応する Sheet の audioFilename を探して再生
+    private func prepareAndPlayAudioIfAvailable(for sheetFilename: String?, sheetObject: Sheet?) {
+        // sheetObject があれば優先してその audioFilename を使う
+        var audioURL: URL? = nil
+        if let audioName = sheetObject?.audioFilename {
+            audioURL = bundleURLForAudio(named: audioName)
+        } else if let sheetFilename = sheetFilename {
+            // バンドル中のシートを探す（loadBundledSheets を使ってマップ）
+            let bundled = loadBundledSheets()
+            for (filename, sheet) in bundled {
+                if filename.contains("115") {
+                    // filename は String、sheet は Sheet として使える
+                }
+            }
+            if let pair = bundled.first(where: { $0.filename == sheetFilename || $0.sheet.title == sheetFilename }) {
+                audioURL = bundleURLForAudio(named: pair.sheet.audioFilename)
+            }
+        }
+
+        if let url = audioURL {
+            do {
+                try AVAudioSession.sharedInstance().setCategory(.playback, mode: .default)
+                try AVAudioSession.sharedInstance().setActive(true)
+                audioPlayer = try AVAudioPlayer(contentsOf: url)
+                audioPlayer?.prepareToPlay()
+                audioPlayer?.play()
+                currentlyPlayingAudioFilename = url.lastPathComponent
+            } catch {
+                print("Audio playback failed: \(error)")
+                audioPlayer = nil
+                currentlyPlayingAudioFilename = nil
+            }
+        } else {
+            // audio が見つからない場合は nil のまま（ビジュアルで知らせる実装を追加しても良い）
+            currentlyPlayingAudioFilename = nil
+        }
+    }
+    /// バンドル内 bundled-sheets フォルダ（またはルート）から JSON を読み込んで Sheet を返す
+    private func loadBundledSheets() -> [(filename: String, sheet: Sheet)] {
+        var results: [(String, Sheet)] = []
+        let decoder = JSONDecoder()
+
+        // 1) try subdirectory (if you added folder references)
+        if let urls = Bundle.main.urls(forResourcesWithExtension: "json", subdirectory: "bundled-sheets") {
+            for url in urls {
+                do {
+                    let data = try Data(contentsOf: url)
+                    let s = try decoder.decode(Sheet.self, from: data)
+                    results.append((url.lastPathComponent, s))
+                } catch {
+                    print("Failed decode bundled sheet at \(url): \(error)")
+                }
+            }
+        }
+
+        // 2) fallback: try any json in bundle root (if you added files as group)
+        // --- replace the fallback block inside loadBundledSheets() with this:
+        if results.isEmpty {
+            if let urls = Bundle.main.urls(forResourcesWithExtension: "json", subdirectory: nil) {
+                for url in urls {
+                    // Skip hidden files and non-json (urls already filtered by extension, but be defensive)
+                    let filename = url.lastPathComponent
+                    if filename.hasPrefix(".") { continue }
+
+                    do {
+                        let data = try Data(contentsOf: url)
+                        let s = try decoder.decode(Sheet.self, from: data)
+                        // avoid duplicate filename entries (results contains tuples (String, Sheet))
+                        if !results.contains(where: { $0.0 == filename }) {
+                            results.append((filename, s))
+                        }
+                    } catch {
+                        // ignore files that aren't valid Sheet JSON
+                        // you can log for debugging:
+                        // print("Skipping non-sheet or unreadable JSON at \(url): \(error)")
+                    }
+                }
+            }
+        }
+        return results
+    }
 
     var body: some View {
         GeometryReader { geo in
@@ -339,6 +444,8 @@ struct ContentView: View {
                     }
                 }
             }
+
+            
         }
     }
 
@@ -393,6 +500,97 @@ struct ContentView: View {
     // MARK: - Playback (spawn/clear/delete を整理してスケジュール)
     private func startPlayback(in size: CGSize) {
         guard !isPlaying else { return }
+
+        // Try to prepare audio URL based on the currently selected sample entry (bundled/saved/builtin)
+        var audioURL: URL? = nil
+        var sheetForOffset: Sheet? = nil
+
+        if sampleEntries.indices.contains(selectedSampleIndex) {
+            let entry = sampleEntries[selectedSampleIndex]
+
+            // 1) Prefer a Sheet object attached to the SampleEntry (most reliable)
+            if let sheet = entry.sheetObject {
+                sheetForOffset = sheet
+                if let audioName = sheet.audioFilename {
+                    // try bundle first
+                    audioURL = bundleURLForAudio(named: audioName)
+                    // fallback to Documents (user-imported audio)
+                    if audioURL == nil {
+                        let docCandidate = SheetFileManager.documentsURL.appendingPathComponent(audioName)
+                        if FileManager.default.fileExists(atPath: docCandidate.path) {
+                            audioURL = docCandidate
+                        }
+                    }
+                }
+            }
+
+            // 2) If no sheetObject, but entry has bundledFilename or is a bundle-display, try to locate corresponding bundled Sheet
+            if audioURL == nil {
+                let bundled = loadBundledSheets() // returns array of (String, Sheet) tuples or similar
+                // Normalize display name by removing " (bundle)" suffix for title match
+                let displayTitle = entry.name.hasSuffix(" (bundle)") ? entry.name.replacingOccurrences(of: " (bundle)", with: "") : entry.name
+
+                // Try to find by title match first
+                for pair in bundled {
+                    let filename = pair.0
+                    let sheet = pair.1
+                    if sheet.title == displayTitle || filename == entry.bundledFilename || displayTitle.contains(filename) {
+                        sheetForOffset = sheet
+                        if let audioName = sheet.audioFilename {
+                            audioURL = bundleURLForAudio(named: audioName)
+                            if audioURL == nil {
+                                // try documents fallback for audio file with same filename
+                                let docCandidate = SheetFileManager.documentsURL.appendingPathComponent(audioName)
+                                if FileManager.default.fileExists(atPath: docCandidate.path) {
+                                    audioURL = docCandidate
+                                }
+                            }
+                        }
+                        break
+                    }
+                }
+            }
+
+            // 3) As a last resort, if entry name itself looks like an audio filename (unlikely), try that
+            if audioURL == nil {
+                // attempt to treat entry.name as audio filename (strip " (bundle)" suffix)
+                let possibleName = entry.name.replacingOccurrences(of: " (bundle)", with: "")
+                if let testURL = bundleURLForAudio(named: possibleName) {
+                    audioURL = testURL
+                } else {
+                    let docCandidate = SheetFileManager.documentsURL.appendingPathComponent(possibleName)
+                    if FileManager.default.fileExists(atPath: docCandidate.path) {
+                        audioURL = docCandidate
+                    }
+                }
+            }
+        }
+
+        // set up AVAudioSession and AVAudioPlayer if we have audio
+        if let url = audioURL {
+            do {
+                try AVAudioSession.sharedInstance().setCategory(.playback, mode: .default)
+                try AVAudioSession.sharedInstance().setActive(true)
+                audioPlayer = try AVAudioPlayer(contentsOf: url)
+                audioPlayer?.prepareToPlay()
+
+                // apply sheet.offset if available
+                if let sheet = sheetForOffset, let offset = sheet.offset {
+                    audioPlayer?.currentTime = max(0, offset)
+                }
+
+                audioPlayer?.play()
+                currentlyPlayingAudioFilename = url.lastPathComponent
+            } catch {
+                print("Audio playback prepare failed: \(error)")
+                audioPlayer = nil
+                currentlyPlayingAudioFilename = nil
+            }
+        } else {
+            currentlyPlayingAudioFilename = nil
+        }
+
+        // Now schedule notes as before
         isPlaying = true
         startDate = Date()
         activeNotes.removeAll()
@@ -493,6 +691,13 @@ struct ContentView: View {
                     // cancel any auto-delete
                     self.autoDeleteWorkItems.values.forEach { $0.cancel() }
                     self.autoDeleteWorkItems.removeAll()
+
+                    // stop audio when finished
+                    if audioPlayer?.isPlaying == true {
+                        audioPlayer?.stop()
+                    }
+                    audioPlayer = nil
+                    currentlyPlayingAudioFilename = nil
                 }
             }
             scheduledWorkItems.append(finishWork)
@@ -501,6 +706,14 @@ struct ContentView: View {
     }
 
     private func stopPlayback() {
+        // stop audio
+        if audioPlayer?.isPlaying == true {
+            audioPlayer?.stop()
+        }
+        audioPlayer = nil
+        currentlyPlayingAudioFilename = nil
+
+        // existing cleanup
         for w in scheduledWorkItems { w.cancel() }
         scheduledWorkItems.removeAll()
         autoDeleteWorkItems.values.forEach { $0.cancel() }
@@ -508,7 +721,13 @@ struct ContentView: View {
         isPlaying = false
         startDate = nil
     }
-
+    private func stopAudioIfPlaying() {
+        if audioPlayer?.isPlaying == true {
+            audioPlayer?.stop()
+        }
+        audioPlayer = nil
+        currentlyPlayingAudioFilename = nil
+    }
     private func resetAll() {
         stopPlayback()
         withAnimation(.easeOut(duration: 0.15)) {
