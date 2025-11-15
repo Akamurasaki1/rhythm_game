@@ -1,4 +1,5 @@
 import Foundation
+import SheetModel
 import UIKit
 
 public struct SheetFileManager {

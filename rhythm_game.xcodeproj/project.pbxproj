@@ -8,6 +8,7 @@
 
 /* Begin PBXBuildFile section */
 		9C0B8E0F2EC74DDE000337A1 /* Algorithms in Frameworks */ = {isa = PBXBuildFile; productRef = 9C0B8E0E2EC74DDE000337A1 /* Algorithms */; };
+		9C0B8E592EC859EB000337A1 /* SheetModel in Frameworks */ = {isa = PBXBuildFile; productRef = 9C0B8E582EC859EB000337A1 /* SheetModel */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -89,6 +90,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				9C0B8E592EC859EB000337A1 /* SheetModel in Frameworks */,
 				9C0B8E0F2EC74DDE000337A1 /* Algorithms in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -155,6 +157,7 @@
 			name = rhythm_game;
 			packageProductDependencies = (
 				9C0B8E0E2EC74DDE000337A1 /* Algorithms */,
+				9C0B8E582EC859EB000337A1 /* SheetModel */,
 			);
 			productName = rhythm_game;
 			productReference = 9C0B8DBB2EC30E08000337A1 /* rhythm_game.app */;
@@ -240,6 +243,7 @@
 			minimizedProjectReferenceProxies = 1;
 			packageReferences = (
 				9C0B8E0D2EC74DDE000337A1 /* XCRemoteSwiftPackageReference "swift-algorithms" */,
+				9C0B8E572EC859DC000337A1 /* XCLocalSwiftPackageReference "Packages/SheetModel/SheetModel" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 9C0B8DBC2EC30E08000337A1 /* Products */;
@@ -627,6 +631,13 @@
 		};
 /* End XCConfigurationList section */
 
+/* Begin XCLocalSwiftPackageReference section */
+		9C0B8E572EC859DC000337A1 /* XCLocalSwiftPackageReference "Packages/SheetModel/SheetModel" */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = Packages/SheetModel/SheetModel;
+		};
+/* End XCLocalSwiftPackageReference section */
+
 /* Begin XCRemoteSwiftPackageReference section */
 		9C0B8E0D2EC74DDE000337A1 /* XCRemoteSwiftPackageReference "swift-algorithms" */ = {
 			isa = XCRemoteSwiftPackageReference;
@@ -643,6 +654,10 @@
 			isa = XCSwiftPackageProductDependency;
 			package = 9C0B8E0D2EC74DDE000337A1 /* XCRemoteSwiftPackageReference "swift-algorithms" */;
 			productName = Algorithms;
+		};
+		9C0B8E582EC859EB000337A1 /* SheetModel */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = SheetModel;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};

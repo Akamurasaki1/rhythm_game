@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Bucket
+   uuid = "EB2E05EC-DC38-4D06-92EB-7997B8776946"
+   type = "1"
+   version = "2.0">
+   <Breakpoints>
+      <BreakpointProxy
+         BreakpointExtensionID = "Xcode.Breakpoint.AddressBreakpoint">
+         <BreakpointContent
+            uuid = "B7F3C5CA-2A71-4E69-8A99-1F78E874CAE3"
+            shouldBeEnabled = "Yes"
+            ignoreCount = "0"
+            continueAfterRunningActions = "No"
+            symbolName = "*0x101040b6c">
+            <Locations>
+               <Location
+                  uuid = "B7F3C5CA-2A71-4E69-8A99-1F78E874CAE3 - 61db3fdf2d7c9f81"
+                  shouldBeEnabled = "Yes"
+                  ignoreCount = "0"
+                  continueAfterRunningActions = "No"
+                  symbolName = "mach_msg2_trap"
+                  moduleName = "libsystem_kernel.dylib"
+                  usesParentBreakpointCondition = "Yes">
+               </Location>
+            </Locations>
+         </BreakpointContent>
+      </BreakpointProxy>
+   </Breakpoints>
+</Bucket>

@@ -1,4 +1,6 @@
 import SwiftUI
+import SheetModel
+
 import AVFoundation
 import UniformTypeIdentifiers
 
@@ -414,9 +416,8 @@ struct ContentView: View {
                                     if !isPlaying {
                                         if sampleIndex >= sampleDataSets.count {
                                             let bidx = sampleIndex - sampleDataSets.count
-                                            if bundledSheets.indices.contains(bidx) {
-                                                notesToPlay = bundledSheets[bidx].sheet.notes as! [Note]
-                                            } else {
+                                            if bundledSheets.indices.contains(bidx)
+                                            {
                                                 notesToPlay = []
                                             }
                                         } else {

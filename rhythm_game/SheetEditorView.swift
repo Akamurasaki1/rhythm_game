@@ -1,4 +1,5 @@
 import SwiftUI
+import SheetModel
 import UniformTypeIdentifiers
 
 /// Minimal, safe Sheet editor — simplified so compiler typecheck won't explode.

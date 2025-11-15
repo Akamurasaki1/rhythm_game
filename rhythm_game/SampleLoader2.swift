@@ -1,4 +1,5 @@
 import Foundation
+import SheetModel
 import SwiftUI
 
 // Use BundledSheet and SampleEntry from SampleTypes.swift
@@ -60,7 +61,7 @@ func makeSampleEntries(from sampleDataSets: [[Note]]) -> [SampleEntry] {
     // built-ins
     for (i, s) in sampleDataSets.enumerated() {
         let name = "Builtin \(i + 1)"
-        entries.append(SampleEntry(name: name, notes: s))
+        entries.append(SampleEntry(name: name, notes: s as! [SheetNote]))
     }
 
     // saved sheets (Documents)
@@ -70,7 +71,7 @@ func makeSampleEntries(from sampleDataSets: [[Note]]) -> [SampleEntry] {
         let mapped: [Note] = sheet.notes.map {
             Note(time: $0.time, angleDegrees: $0.angle, normalizedPosition: CGPoint(x: $0.x, y: $0.y))
         }
-        entries.append(SampleEntry(name: displayName, notes: mapped, bundledFilename: filename, sheetObject: sheet))
+        entries.append(SampleEntry(name: displayName, notes: mapped as! [SheetNote], bundledFilename: filename, sheetObject: sheet))
     }
 
     // bundled sheets
@@ -80,7 +81,7 @@ func makeSampleEntries(from sampleDataSets: [[Note]]) -> [SampleEntry] {
         let mapped: [Note] = b.sheet.notes.map {
             Note(time: $0.time, angleDegrees: $0.angle, normalizedPosition: CGPoint(x: $0.x, y: $0.y))
         }
-        entries.append(SampleEntry(name: displayName, notes: mapped, bundledFilename: b.filename, sheetObject: b.sheet))
+        entries.append(SampleEntry(name: displayName, notes: mapped as! [SheetNote], bundledFilename: b.filename, sheetObject: b.sheet))
     }
 
     return entries

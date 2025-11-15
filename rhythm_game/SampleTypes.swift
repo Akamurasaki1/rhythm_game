@@ -4,6 +4,12 @@
 //
 //  Created by Karen Naito on 2025/11/15.
 //
+//
+//  SampleTypes.swift
+//  rhythm_game
+//
+//  Created by Karen Naito on 2025/11/15.
+//
 
 // Add to rhythm_game target
 import Foundation
@@ -18,9 +24,9 @@ public struct SampleEntry {
     public var bundledFilename: String?      // 例: "115 もぺもぺ(2019).json"
     public var sheetObject: Sheet?           // if available, keep the decoded Sheet for metadata/audioFilename
 
-    public init(name: String, notes: [Note], bundledFilename: String? = nil, sheetObject: Sheet? = nil) {
+    public init(name: String, notes: [SheetNote], bundledFilename: String? = nil, sheetObject: Sheet? = nil) {
         self.name = name
-        self.notes = notes
+        self.notes = notes as! [SheetNote] as! [Note]
         self.bundledFilename = bundledFilename
         self.sheetObject = sheetObject
     }
