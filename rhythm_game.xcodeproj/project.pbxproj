@@ -6,6 +6,10 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXBuildFile section */
+		9C0B8E0F2EC74DDE000337A1 /* Algorithms in Frameworks */ = {isa = PBXBuildFile; productRef = 9C0B8E0E2EC74DDE000337A1 /* Algorithms */; };
+/* End PBXBuildFile section */
+
 /* Begin PBXContainerItemProxy section */
 		9C0B8DC92EC30E0B000337A1 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
@@ -37,6 +41,13 @@
 			);
 			target = 9C0B8DBA2EC30E08000337A1 /* rhythm_game */;
 		};
+		9C0B8E132EC82D8F000337A1 /* Exceptions for "Packages" folder in "rhythm_game" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				SheetModel/SheetModel,
+			);
+			target = 9C0B8DBA2EC30E08000337A1 /* rhythm_game */;
+		};
 /* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
@@ -58,6 +69,19 @@
 			path = rhythm_gameUITests;
 			sourceTree = "<group>";
 		};
+		9C0B8DFE2EC74CF0000337A1 /* Resources */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = Resources;
+			sourceTree = "<group>";
+		};
+		9C0B8E102EC74E22000337A1 /* Packages */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				9C0B8E132EC82D8F000337A1 /* Exceptions for "Packages" folder in "rhythm_game" target */,
+			);
+			path = Packages;
+			sourceTree = "<group>";
+		};
 /* End PBXFileSystemSynchronizedRootGroup section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -65,6 +89,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				9C0B8E0F2EC74DDE000337A1 /* Algorithms in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -88,6 +113,8 @@
 		9C0B8DB22EC30E08000337A1 = {
 			isa = PBXGroup;
 			children = (
+				9C0B8E102EC74E22000337A1 /* Packages */,
+				9C0B8DFE2EC74CF0000337A1 /* Resources */,
 				9C0B8DBD2EC30E08000337A1 /* rhythm_game */,
 				9C0B8DCB2EC30E0B000337A1 /* rhythm_gameTests */,
 				9C0B8DD52EC30E0B000337A1 /* rhythm_gameUITests */,
@@ -122,9 +149,12 @@
 			);
 			fileSystemSynchronizedGroups = (
 				9C0B8DBD2EC30E08000337A1 /* rhythm_game */,
+				9C0B8DFE2EC74CF0000337A1 /* Resources */,
+				9C0B8E102EC74E22000337A1 /* Packages */,
 			);
 			name = rhythm_game;
 			packageProductDependencies = (
+				9C0B8E0E2EC74DDE000337A1 /* Algorithms */,
 			);
 			productName = rhythm_game;
 			productReference = 9C0B8DBB2EC30E08000337A1 /* rhythm_game.app */;
@@ -208,6 +238,9 @@
 			);
 			mainGroup = 9C0B8DB22EC30E08000337A1;
 			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				9C0B8E0D2EC74DDE000337A1 /* XCRemoteSwiftPackageReference "swift-algorithms" */,
+			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 9C0B8DBC2EC30E08000337A1 /* Products */;
 			projectDirPath = "";
@@ -593,6 +626,25 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		9C0B8E0D2EC74DDE000337A1 /* XCRemoteSwiftPackageReference "swift-algorithms" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/apple/swift-algorithms.git";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 1.2.1;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		9C0B8E0E2EC74DDE000337A1 /* Algorithms */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 9C0B8E0D2EC74DDE000337A1 /* XCRemoteSwiftPackageReference "swift-algorithms" */;
+			productName = Algorithms;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = 9C0B8DB32EC30E08000337A1 /* Project object */;
 }
